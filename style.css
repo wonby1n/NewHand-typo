@@ -1,0 +1,318 @@
+@font-face {
+  font-family: "Paperlogy";
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+  src: url("https://cdn.jsdelivr.net/gh/fonts-archive/Paperlogy/Paperlogy-4Regular.woff2") format("woff2");
+}
+
+@font-face {
+  font-family: "Paperlogy";
+  font-weight: 600;
+  font-style: normal;
+  font-display: swap;
+  src: url("https://cdn.jsdelivr.net/gh/fonts-archive/Paperlogy/Paperlogy-6SemiBold.woff2") format("woff2");
+}
+
+@font-face {
+  font-family: "Paperlogy";
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+  src: url("https://cdn.jsdelivr.net/gh/fonts-archive/Paperlogy/Paperlogy-7Bold.woff2") format("woff2");
+}
+
+@font-face {
+  font-family: "Paperlogy";
+  font-weight: 800;
+  font-style: normal;
+  font-display: swap;
+  src: url("https://cdn.jsdelivr.net/gh/fonts-archive/Paperlogy/Paperlogy-8ExtraBold.woff2") format("woff2");
+}
+
+* {
+  box-sizing: border-box;
+  -webkit-tap-highlight-color: transparent;
+}
+
+html, body {
+  margin: 0;
+  padding: 0;
+  width: 100%;
+  height: 100%;
+  background: #0d0d12;
+  color: #fff;
+  font-family: "Paperlogy", -apple-system, BlinkMacSystemFont, "Apple SD Gothic Neo", "Malgun Gothic", sans-serif;
+  overflow: hidden;
+}
+
+.hidden {
+  display: none !important;
+}
+
+/* ---------- Overlays ---------- */
+.overlay {
+  position: fixed;
+  inset: 0;
+  background: #0d0d12;
+  z-index: 100;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 24px;
+}
+
+.overlay-box p {
+  font-size: 18px;
+  line-height: 1.6;
+  margin: 8px 0;
+}
+
+.overlay-box .small {
+  font-size: 14px;
+  color: #bbb;
+}
+
+.rotate-icon {
+  font-size: 48px;
+  margin-bottom: 16px;
+  animation: rotate-hint 1.6s ease-in-out infinite;
+}
+
+@keyframes rotate-hint {
+  0%, 100% { transform: rotate(0deg); }
+  50% { transform: rotate(-90deg); }
+}
+
+#copy-link-btn {
+  margin-top: 16px;
+  padding: 12px 20px;
+  border: none;
+  border-radius: 999px;
+  background: #ff5fa2;
+  color: #fff;
+  font-size: 15px;
+  font-weight: 600;
+}
+
+/* Only show rotate overlay in portrait */
+#rotate-overlay {
+  display: none;
+}
+@media (orientation: portrait) {
+  #rotate-overlay {
+    display: flex;
+  }
+}
+
+/* ---------- Setup screen ---------- */
+.screen {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  overflow-y: auto;
+}
+
+#setup-screen h1 {
+  font-size: 30px;
+  font-weight: 800;
+  margin: 0 0 4px;
+  letter-spacing: 0.5px;
+}
+
+.subtitle {
+  color: #aaa;
+  font-size: 14px;
+  margin: 0 0 24px;
+  text-align: center;
+}
+
+.hand-config {
+  width: 100%;
+  max-width: 420px;
+  margin-bottom: 14px;
+}
+
+.hand-title {
+  font-size: 14px;
+  font-weight: 700;
+  margin: 0 0 8px;
+  color: #ff5fa2;
+}
+
+.hand-config:nth-of-type(2) .hand-title {
+  color: #5fc9ff;
+}
+
+.word-inputs {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  width: 100%;
+}
+
+.word-inputs label {
+  display: flex;
+  flex-direction: column;
+  font-size: 13px;
+  color: #ccc;
+  gap: 6px;
+}
+
+.word-inputs input {
+  padding: 10px 12px;
+  border-radius: 10px;
+  border: 1px solid #333;
+  background: #1a1a22;
+  color: #fff;
+  font-size: 15px;
+}
+
+.voice-select-label {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  width: 100%;
+  max-width: 420px;
+  font-size: 13px;
+  color: #ccc;
+  margin-bottom: 16px;
+}
+
+.toggle-row {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  width: 100%;
+  max-width: 420px;
+  margin-bottom: 24px;
+}
+
+.toggle-label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+  color: #ccc;
+}
+
+.toggle-label input[type="checkbox"] {
+  width: 18px;
+  height: 18px;
+  accent-color: #ff5fa2;
+}
+
+#voice-select {
+  padding: 10px 12px;
+  border-radius: 10px;
+  border: 1px solid #333;
+  background: #1a1a22;
+  color: #fff;
+  font-size: 15px;
+}
+
+#start-btn {
+  padding: 14px 32px;
+  border: none;
+  border-radius: 999px;
+  background: linear-gradient(135deg, #ff5fa2, #ff9d5f);
+  color: #fff;
+  font-size: 17px;
+  font-weight: 700;
+}
+
+.status {
+  min-height: 20px;
+  color: #ff8080;
+  font-size: 13px;
+  margin-top: 12px;
+  text-align: center;
+}
+
+/* ---------- Camera screen ---------- */
+#camera-screen {
+  padding: 0;
+}
+
+#camera-wrap {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  transform: scaleX(-1); /* mirror for selfie view */
+}
+
+#video, #overlay {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+#video.beauty-on {
+  filter: brightness(1.08) contrast(1.06) saturate(1.15) blur(0.3px);
+}
+
+/* #labels sits inside the mirrored #camera-wrap. It applies a second
+   scaleX(-1) so the two flips cancel and its text renders left-to-right
+   normally; JS still positions labels using mirrored coordinates so they
+   line up with the (mirrored) video/canvas beneath them. */
+#labels {
+  position: absolute;
+  inset: 0;
+  transform: scaleX(-1);
+  pointer-events: none;
+}
+
+.finger-label {
+  position: absolute;
+  transform: translate(-50%, -50%);
+  font-size: 22px;
+  font-weight: 800;
+  white-space: nowrap;
+  transition: transform 0.08s ease, filter 0.08s ease;
+  -webkit-text-stroke: 1.5px rgba(0, 0, 0, 0.55);
+  paint-order: stroke fill;
+  text-shadow: 0 1px 4px rgba(0, 0, 0, 0.45);
+}
+
+.finger-label.active {
+  transform: translate(-50%, -50%) scale(1.35);
+  filter: brightness(1.25);
+}
+
+/* pastel palette, keyed by finger so it matches on both hands */
+.finger-label.finger-index {
+  color: #b8f2e6; /* mint */
+}
+
+.finger-label.finger-middle {
+  color: #fdf6a5; /* lemon */
+}
+
+.finger-label.finger-ring {
+  color: #ffd6e8; /* pastel pink */
+}
+
+.finger-label.finger-pinky {
+  color: #d6ccff; /* pastel lavender */
+}
+
+#back-btn {
+  position: absolute;
+  top: max(12px, env(safe-area-inset-top));
+  left: 12px;
+  z-index: 10;
+  padding: 8px 14px;
+  border: none;
+  border-radius: 999px;
+  background: rgba(0,0,0,0.5);
+  color: #fff;
+  font-size: 14px;
+}
