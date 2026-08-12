@@ -24,6 +24,8 @@ const HANDS = {
   right: { category: "Right", title: "오른손" },
 };
 const CATEGORY_TO_HAND = { Left: "left", Right: "right" };
+// fingers whose label is a fixed image, shown only while pinched, plus a spoken word
+const SPECIAL_LABELS = { left: { index: { image: "ssafy.png", word: "싸피" } } };
 
 const els = {
   setupScreen: document.getElementById("setup-screen"),
@@ -38,6 +40,7 @@ const els = {
   labels: document.getElementById("labels"),
   inappOverlay: document.getElementById("inapp-overlay"),
   copyLinkBtn: document.getElementById("copy-link-btn"),
+  gestureBanner: document.getElementById("gesture-banner"),
   beautyToggle: document.getElementById("beauty-toggle"),
   muteToggle: document.getElementById("mute-toggle"),
 };
@@ -54,6 +57,35 @@ Object.keys(HANDS).forEach((h) => {
   fingerState[h] = {};
   Object.keys(FINGERS).forEach((f) => (fingerState[h][f] = { pinched: false, lastSpeakAt: 0 }));
 });
+
+// ---------- Thumbs-up gesture ----------
+const THUMBS_UP_ON_FRAMES = 3;
+const THUMBS_UP_OFF_FRAMES = 5;
+const gestureState = {}; // gestureState[hand] = { onStreak, offStreak, active }
+Object.keys(HANDS).forEach((h) => {
+  gestureState[h] = { onStreak: 0, offStreak: 0, active: false };
+});
+
+// thumb pointing clearly upward while the other four fingers are curled into a fist
+function isThumbsUp(lm) {
+  const scale = dist(lm[WRIST], lm[MIDDLE_MCP]) || 0.001;
+  const thumbUp = lm[2].y - lm[THUMB_TIP].y > scale * 0.35;
+  const curled = Object.values(FINGERS).every((f) => lm[f.tip].y > lm[f.tip - 2].y);
+  return thumbUp && curled;
+}
+
+// ---------- Font toggle ----------
+function applyFont(font) {
+  document.body.classList.toggle("font-pretendard", font === "pretendard");
+  document.querySelectorAll(".font-toggle-btn").forEach((btn) => {
+    btn.classList.toggle("active", btn.dataset.font === font);
+  });
+  localStorage.setItem("newhandtypo-font", font);
+}
+document.querySelectorAll(".font-toggle-btn").forEach((btn) => {
+  btn.addEventListener("click", () => applyFont(btn.dataset.font));
+});
+applyFont(localStorage.getItem("newhandtypo-font") || "paperlogy");
 
 // ---------- In-app browser detection ----------
 function isInAppBrowser() {
@@ -73,6 +105,10 @@ els.copyLinkBtn.addEventListener("click", async () => {
 });
 
 // ---------- Voice list ----------
+// Korean TTS voice packs don't expose a gender field, so match known male
+// voice names (Windows/macOS/Chrome) to pick a sensible default.
+const MALE_VOICE_HINTS = /InJoon|Minsu|Jinho|남성|male/i;
+
 function populateVoices() {
   const voices = speechSynthesis.getVoices();
   if (!voices.length) return;
@@ -87,6 +123,9 @@ function populateVoices() {
   });
   els.voiceSelect.dataset.pool = "loaded";
   populateVoices.list = list;
+
+  const maleIdx = list.findIndex((v) => MALE_VOICE_HINTS.test(v.name));
+  if (maleIdx !== -1) els.voiceSelect.value = maleIdx;
 }
 populateVoices();
 if (speechSynthesis.onvoiceschanged !== undefined) {
@@ -114,9 +153,19 @@ function speak(text) {
 
 // ---------- Setup -> Start ----------
 els.startBtn.addEventListener("click", async () => {
+  // iOS Safari (and some mobile browsers) only unlock SpeechSynthesis inside
+  // a direct user-gesture handler. Later speak() calls happen from the pinch
+  // detection loop (not a gesture), so they'd silently no-op without this.
+  try {
+    const unlock = new SpeechSynthesisUtterance(" ");
+    unlock.volume = 0;
+    speechSynthesis.speak(unlock);
+  } catch {}
+
   els.status.textContent = "";
   Object.keys(HANDS).forEach((h) => {
     Object.keys(FINGERS).forEach((f) => {
+      if (SPECIAL_LABELS[h]?.[f]) return; // image slot, no word to read
       const input = document.getElementById(`word-${h}-${f}`);
       words[h][f] = input.value.trim(); // empty string = finger stays unlabeled
     });
@@ -130,7 +179,7 @@ els.startBtn.addEventListener("click", async () => {
 
   try {
     stream = await navigator.mediaDevices.getUserMedia({
-      video: { facingMode: "user", width: { ideal: 1280 }, height: { ideal: 720 } },
+      video: { facingMode: "user" },
       audio: false,
     });
   } catch (err) {
@@ -166,6 +215,7 @@ els.startBtn.addEventListener("click", async () => {
 
   Object.keys(HANDS).forEach((h) => {
     Object.keys(FINGERS).forEach((f) => {
+      if (SPECIAL_LABELS[h]?.[f]) return; // image slot keeps its <img>, no text
       document.getElementById(`label-${h}-${f}`).textContent = words[h][f];
     });
   });
@@ -223,15 +273,34 @@ function detectLoop() {
       seenHands.add(handKey);
       drawFingertipDots(lm, toPixel);
       updateFingers(handKey, lm, toPixel, rect, now);
+      updateGesture(handKey, lm);
     });
 
     Object.keys(HANDS).forEach((h) => {
       const handVisible = seenHands.has(h);
       Object.keys(FINGERS).forEach((f) => {
+        if (SPECIAL_LABELS[h]?.[f]) {
+          // image slot: visibility follows pinch state, not hand presence,
+          // but force-hide if the hand disappears mid-pinch
+          if (!handVisible) {
+            fingerState[h][f].pinched = false;
+            document.getElementById(`label-${h}-${f}`).classList.remove("shown");
+          }
+          return;
+        }
         const show = handVisible && Boolean(words[h][f]);
         document.getElementById(`label-${h}-${f}`).style.display = show ? "block" : "none";
       });
+      if (!handVisible) {
+        const gs = gestureState[h];
+        gs.onStreak = 0;
+        gs.offStreak = 0;
+        gs.active = false;
+      }
     });
+
+    const anyThumbsUp = Object.values(gestureState).some((g) => g.active);
+    els.gestureBanner.classList.toggle("shown", anyThumbsUp);
   }
 
   rafId = requestAnimationFrame(detectLoop);
@@ -274,16 +343,23 @@ function updateFingers(handKey, lm, toPixel, rect, now) {
     const state = fingerState[handKey][key];
     const label = document.getElementById(`label-${handKey}-${key}`);
 
+    const special = SPECIAL_LABELS[handKey]?.[key];
     if (!state.pinched && d < pinchOn) {
       state.pinched = true;
-      if (now - state.lastSpeakAt > 600) {
+      if (special) {
+        label.classList.add("shown");
+        if (now - state.lastSpeakAt > 600) {
+          state.lastSpeakAt = now;
+          speak(special.word);
+        }
+      } else if (now - state.lastSpeakAt > 600) {
         state.lastSpeakAt = now;
         speak(words[handKey][key]);
         label.classList.add("active");
       }
     } else if (state.pinched && d > pinchOff) {
       state.pinched = false;
-      label.classList.remove("active");
+      label.classList.remove(special ? "shown" : "active");
     }
 
     const px = toPixel(tip);
@@ -291,6 +367,19 @@ function updateFingers(handKey, lm, toPixel, rect, now) {
     label.style.left = mirroredX + "px";
     label.style.top = px.y - 34 + "px";
   });
+}
+
+function updateGesture(handKey, lm) {
+  const gs = gestureState[handKey];
+  if (isThumbsUp(lm)) {
+    gs.onStreak++;
+    gs.offStreak = 0;
+    if (gs.onStreak >= THUMBS_UP_ON_FRAMES) gs.active = true;
+  } else {
+    gs.offStreak++;
+    gs.onStreak = 0;
+    if (gs.offStreak >= THUMBS_UP_OFF_FRAMES) gs.active = false;
+  }
 }
 
 function dist(a, b) {
@@ -307,8 +396,17 @@ Object.keys(HANDS).forEach((handKey) => {
   Object.keys(FINGERS).forEach((fingerKey) => {
     const div = document.createElement("div");
     div.id = `label-${handKey}-${fingerKey}`;
-    div.className = `finger-label finger-${fingerKey}`;
-    div.style.display = "none";
+    const special = SPECIAL_LABELS[handKey]?.[fingerKey];
+    if (special) {
+      div.className = `finger-label finger-label-special finger-${fingerKey}`;
+      const img = document.createElement("img");
+      img.src = special.image;
+      img.alt = "";
+      div.appendChild(img);
+    } else {
+      div.className = `finger-label finger-${fingerKey}`;
+      div.style.display = "none";
+    }
     els.labels.appendChild(div);
   });
 });

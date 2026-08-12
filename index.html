@@ -4,17 +4,10 @@
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=no" />
 <title>NewHand-typo - 손가락으로 말하기</title>
+<link rel="stylesheet" as="style" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css" />
 <link rel="stylesheet" href="style.css" />
 </head>
 <body>
-
-  <!-- 세로 모드 안내 -->
-  <div id="rotate-overlay" class="overlay">
-    <div class="overlay-box">
-      <div class="rotate-icon">📱↻</div>
-      <p>가로 모드로 돌려주세요</p>
-    </div>
-  </div>
 
   <!-- 인앱 브라우저 경고 -->
   <div id="inapp-overlay" class="overlay hidden">
@@ -27,47 +20,57 @@
 
   <!-- 설정 화면 -->
   <div id="setup-screen" class="screen">
+    <div id="font-toggle" class="font-toggle">
+      <button type="button" class="font-toggle-btn" data-font="paperlogy">Paperlogy</button>
+      <button type="button" class="font-toggle-btn" data-font="pretendard">Pretendard</button>
+    </div>
     <h1>NewHand-typo</h1>
     <p class="subtitle">손가락 끝에 단어를 올려두고, 엄지로 튕기면 말해줘요. 양손 다 인식돼요</p>
 
-    <div class="hand-config">
-      <h2 class="hand-title">왼손</h2>
-      <div class="word-inputs">
-        <label>검지 <input type="text" id="word-left-index" maxlength="16" value="" /></label>
-        <label>중지 <input type="text" id="word-left-middle" maxlength="16" value="" /></label>
-        <label>약지 <input type="text" id="word-left-ring" maxlength="16" value="" /></label>
-        <label>소지 <input type="text" id="word-left-pinky" maxlength="16" value="" /></label>
+    <div class="setup-body">
+      <div class="setup-col setup-hands">
+        <div class="hand-config">
+          <h2 class="hand-title">왼손</h2>
+          <div class="word-inputs">
+            <label class="fixed-slot">검지 <span class="fixed-slot-value">SSAFY 로고 (핀치 시 표시)</span></label>
+            <label>중지 <input type="text" id="word-left-middle" maxlength="16" value="" /></label>
+            <label>약지 <input type="text" id="word-left-ring" maxlength="16" value="" /></label>
+            <label>소지 <input type="text" id="word-left-pinky" maxlength="16" value="" /></label>
+          </div>
+        </div>
+
+        <div class="hand-config">
+          <h2 class="hand-title">오른손</h2>
+          <div class="word-inputs">
+            <label>검지 <input type="text" id="word-right-index" maxlength="16" value="" /></label>
+            <label>중지 <input type="text" id="word-right-middle" maxlength="16" value="" /></label>
+            <label>약지 <input type="text" id="word-right-ring" maxlength="16" value="" /></label>
+            <label>소지 <input type="text" id="word-right-pinky" maxlength="16" value="" /></label>
+          </div>
+        </div>
+      </div>
+
+      <div class="setup-col setup-options">
+        <label class="voice-select-label">
+          목소리
+          <select id="voice-select"></select>
+        </label>
+
+        <div class="toggle-row">
+          <label class="toggle-label">
+            <input type="checkbox" id="beauty-toggle" checked />
+            화면 보정 (뽀샤시)
+          </label>
+          <label class="toggle-label">
+            <input type="checkbox" id="mute-toggle" />
+            무음 모드 (소리 없이 단어만 표시)
+          </label>
+        </div>
+
+        <button id="start-btn">카메라 시작하기</button>
+        <p id="setup-status" class="status"></p>
       </div>
     </div>
-
-    <div class="hand-config">
-      <h2 class="hand-title">오른손</h2>
-      <div class="word-inputs">
-        <label>검지 <input type="text" id="word-right-index" maxlength="16" value="" /></label>
-        <label>중지 <input type="text" id="word-right-middle" maxlength="16" value="" /></label>
-        <label>약지 <input type="text" id="word-right-ring" maxlength="16" value="" /></label>
-        <label>소지 <input type="text" id="word-right-pinky" maxlength="16" value="" /></label>
-      </div>
-    </div>
-
-    <label class="voice-select-label">
-      목소리
-      <select id="voice-select"></select>
-    </label>
-
-    <div class="toggle-row">
-      <label class="toggle-label">
-        <input type="checkbox" id="beauty-toggle" checked />
-        화면 보정
-      </label>
-      <label class="toggle-label">
-        <input type="checkbox" id="mute-toggle" />
-        무음 모드 (소리 없이 단어만 표시)
-      </label>
-    </div>
-
-    <button id="start-btn">카메라 시작하기</button>
-    <p id="setup-status" class="status"></p>
   </div>
 
   <!-- 카메라 화면 -->
@@ -75,7 +78,9 @@
     <div id="camera-wrap">
       <video id="video" playsinline autoplay muted></video>
       <canvas id="overlay"></canvas>
-      <div id="labels"></div>
+      <div id="labels">
+        <div id="gesture-banner" class="gesture-banner">I need SSAFY</div>
+      </div>
     </div>
     <button id="back-btn">← 설정</button>
   </div>

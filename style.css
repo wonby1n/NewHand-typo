@@ -42,8 +42,15 @@ html, body {
   height: 100%;
   background: #0d0d12;
   color: #fff;
-  font-family: "Paperlogy", -apple-system, BlinkMacSystemFont, "Apple SD Gothic Neo", "Malgun Gothic", sans-serif;
   overflow: hidden;
+}
+
+body {
+  font-family: "Paperlogy", -apple-system, BlinkMacSystemFont, "Apple SD Gothic Neo", "Malgun Gothic", sans-serif;
+}
+
+body.font-pretendard {
+  font-family: "Pretendard Variable", Pretendard, -apple-system, BlinkMacSystemFont, "Apple SD Gothic Neo", system-ui, sans-serif;
 }
 
 .hidden {
@@ -74,17 +81,6 @@ html, body {
   color: #bbb;
 }
 
-.rotate-icon {
-  font-size: 48px;
-  margin-bottom: 16px;
-  animation: rotate-hint 1.6s ease-in-out infinite;
-}
-
-@keyframes rotate-hint {
-  0%, 100% { transform: rotate(0deg); }
-  50% { transform: rotate(-90deg); }
-}
-
 #copy-link-btn {
   margin-top: 16px;
   padding: 12px 20px;
@@ -96,16 +92,6 @@ html, body {
   font-weight: 600;
 }
 
-/* Only show rotate overlay in portrait */
-#rotate-overlay {
-  display: none;
-}
-@media (orientation: portrait) {
-  #rotate-overlay {
-    display: flex;
-  }
-}
-
 /* ---------- Setup screen ---------- */
 .screen {
   position: fixed;
@@ -113,9 +99,52 @@ html, body {
   display: flex;
   flex-direction: column;
   align-items: center;
-  justify-content: center;
+  justify-content: flex-start;
   padding: 24px;
   overflow-y: auto;
+}
+
+.setup-body {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  align-items: flex-start;
+  gap: 32px;
+  width: 100%;
+  max-width: 900px;
+}
+
+.setup-col {
+  flex: 1 1 340px;
+  min-width: 280px;
+  max-width: 420px;
+}
+
+.font-toggle {
+  position: absolute;
+  top: max(12px, env(safe-area-inset-top));
+  right: 12px;
+  display: flex;
+  gap: 4px;
+  padding: 4px;
+  border-radius: 999px;
+  background: #1a1a22;
+  border: 1px solid #333;
+}
+
+.font-toggle-btn {
+  padding: 6px 12px;
+  border: none;
+  border-radius: 999px;
+  background: transparent;
+  color: #888;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.font-toggle-btn.active {
+  background: #ff5fa2;
+  color: #fff;
 }
 
 #setup-screen h1 {
@@ -134,7 +163,6 @@ html, body {
 
 .hand-config {
   width: 100%;
-  max-width: 420px;
   margin-bottom: 14px;
 }
 
@@ -173,12 +201,20 @@ html, body {
   font-size: 15px;
 }
 
+.fixed-slot-value {
+  padding: 10px 12px;
+  border-radius: 10px;
+  border: 1px dashed #444;
+  background: #14141a;
+  color: #888;
+  font-size: 13px;
+}
+
 .voice-select-label {
   display: flex;
   flex-direction: column;
   gap: 6px;
   width: 100%;
-  max-width: 420px;
   font-size: 13px;
   color: #ccc;
   margin-bottom: 16px;
@@ -189,7 +225,6 @@ html, body {
   flex-direction: column;
   gap: 10px;
   width: 100%;
-  max-width: 420px;
   margin-bottom: 24px;
 }
 
@@ -273,7 +308,7 @@ html, body {
 .finger-label {
   position: absolute;
   transform: translate(-50%, -50%);
-  font-size: 22px;
+  font-size: 28px;
   font-weight: 800;
   white-space: nowrap;
   transition: transform 0.08s ease, filter 0.08s ease;
@@ -285,6 +320,46 @@ html, body {
 .finger-label.active {
   transform: translate(-50%, -50%) scale(1.35);
   filter: brightness(1.25);
+}
+
+.finger-label-special {
+  opacity: 0;
+  transform: translate(-50%, -50%) scale(0.5);
+  transition: opacity 0.15s ease, transform 0.15s ease;
+}
+
+.finger-label-special.shown {
+  opacity: 1;
+  transform: translate(-50%, -50%) scale(1);
+}
+
+.gesture-banner {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  white-space: nowrap;
+  color: #fff;
+  font-size: 40px;
+  font-weight: 800;
+  letter-spacing: 0.5px;
+  -webkit-text-stroke: 2px rgba(0, 0, 0, 0.55);
+  paint-order: stroke fill;
+  text-shadow: 0 1px 4px rgba(0, 0, 0, 0.45);
+  opacity: 0;
+  transform: translate(-50%, -50%) scale(0.85);
+  transition: opacity 0.2s ease, transform 0.2s ease;
+}
+
+.gesture-banner.shown {
+  opacity: 1;
+  transform: translate(-50%, -50%) scale(1);
+}
+
+.finger-label-special img {
+  display: block;
+  height: 130px;
+  width: auto;
+  filter: drop-shadow(0 3px 10px rgba(0, 0, 0, 0.55));
 }
 
 /* pastel palette, keyed by finger so it matches on both hands */
@@ -315,4 +390,71 @@ html, body {
   background: rgba(0,0,0,0.5);
   color: #fff;
   font-size: 14px;
+}
+
+/* ---------- Responsive (phones / narrow viewports) ---------- */
+@media (max-width: 600px) {
+  .screen {
+    padding: 16px;
+    padding-top: max(16px, env(safe-area-inset-top));
+  }
+
+  .font-toggle {
+    top: max(8px, env(safe-area-inset-top));
+    right: 8px;
+  }
+
+  #setup-screen h1 {
+    font-size: 22px;
+  }
+
+  .subtitle {
+    font-size: 12.5px;
+    margin-bottom: 18px;
+  }
+
+  .setup-body {
+    gap: 20px;
+  }
+
+  .setup-col {
+    flex-basis: 100%;
+    min-width: 0;
+    max-width: 100%;
+  }
+
+  .word-inputs {
+    gap: 8px;
+  }
+
+  .word-inputs input,
+  .fixed-slot-value,
+  #voice-select {
+    font-size: 14px;
+    padding: 9px 10px;
+  }
+
+  #start-btn {
+    width: 100%;
+    padding: 14px 0;
+    font-size: 16px;
+  }
+
+  .finger-label {
+    font-size: 20px;
+  }
+
+  .gesture-banner {
+    font-size: 28px;
+  }
+
+  .finger-label-special img {
+    height: 90px;
+  }
+}
+
+@media (max-width: 360px) {
+  .word-inputs {
+    grid-template-columns: 1fr;
+  }
 }
