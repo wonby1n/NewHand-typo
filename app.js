@@ -24,8 +24,13 @@ const HANDS = {
   right: { category: "Right", title: "오른손" },
 };
 const CATEGORY_TO_HAND = { Left: "left", Right: "right" };
-// fingers whose label is a fixed image, shown only while pinched, plus a spoken word
-const SPECIAL_LABELS = { left: { index: { image: "ssafy.png", word: "싸피" } } };
+// fingers whose label is a fixed image, shown only while pinched (no word, no speech)
+const SPECIAL_LABELS = { left: { index: "ssafy.png" } };
+// while the special image is pinched, it grows/shrinks as the hand moves closer to/
+// farther from the camera, relative to its distance when the pinch started
+// (hand span in the normalized landmark frame grows as the hand nears the camera)
+const PROXIMITY_MIN_SCALE = 0.6;
+const PROXIMITY_MAX_SCALE = 2.2;
 
 const els = {
   setupScreen: document.getElementById("setup-screen"),
@@ -55,7 +60,7 @@ const fingerState = {}; // fingerState[hand][finger] = { pinched, lastSpeakAt }
 Object.keys(HANDS).forEach((h) => {
   words[h] = {};
   fingerState[h] = {};
-  Object.keys(FINGERS).forEach((f) => (fingerState[h][f] = { pinched: false, lastSpeakAt: 0 }));
+  Object.keys(FINGERS).forEach((f) => (fingerState[h][f] = { pinched: false, lastSpeakAt: 0, baseScale: null }));
 });
 
 // ---------- Thumbs-up gesture ----------
@@ -108,6 +113,38 @@ els.copyLinkBtn.addEventListener("click", async () => {
 // Korean TTS voice packs don't expose a gender field, so match known male
 // voice names (Windows/macOS/Chrome) to pick a sensible default.
 const MALE_VOICE_HINTS = /InJoon|Minsu|Jinho|남성|male/i;
+// stock female Korean voices read a bit high/thin by default; nudge pitch down
+const FEMALE_VOICE_PITCH = 0.85;
+
+// pre-recorded male voice clip for "싸피" — device TTS voice packs vary (iOS often
+// has no Korean male voice installed at all), so this is baked in instead of relying
+// on speechSynthesis.
+const ssafyAudio = new Audio("ssafy-voice.mp3");
+ssafyAudio.preload = "auto";
+
+// the recorded clip is quieter than natural speech, and HTMLMediaElement.volume
+// caps at 1.0, so route it through a GainNode to amplify past that ceiling.
+let ssafyAudioCtx = null;
+let ssafyGainWired = false;
+function wireSsafyGain() {
+  if (ssafyGainWired) return;
+  try {
+    ssafyAudioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    const source = ssafyAudioCtx.createMediaElementSource(ssafyAudio);
+    const gain = ssafyAudioCtx.createGain();
+    gain.gain.value = 1.5;
+    source.connect(gain).connect(ssafyAudioCtx.destination);
+    ssafyGainWired = true;
+  } catch {
+    // Web Audio unavailable — fall back to the unboosted element playback
+  }
+}
+
+function playSsafyAudio() {
+  if (isMuted) return;
+  ssafyAudio.currentTime = 0;
+  ssafyAudio.play().catch(() => {});
+}
 
 function populateVoices() {
   const voices = speechSynthesis.getVoices();
@@ -132,18 +169,18 @@ if (speechSynthesis.onvoiceschanged !== undefined) {
   speechSynthesis.onvoiceschanged = populateVoices;
 }
 
-function speak(text) {
+function speak(text, voiceOverride) {
   if (!text || isMuted) return;
   // don't cancel() here: with two hands, a pinch on one hand shouldn't cut
   // off a word just triggered by the other hand. Utterances queue instead.
   if (speechSynthesis.pending && speechSynthesis.speaking) return; // avoid unbounded queue buildup
   const utter = new SpeechSynthesisUtterance(text);
   const list = populateVoices.list || [];
-  const idx = Number(els.voiceSelect.value);
-  const voice = list[idx];
+  const voice = voiceOverride || list[Number(els.voiceSelect.value)];
   if (voice) {
     utter.voice = voice;
     utter.lang = voice.lang;
+    if (!MALE_VOICE_HINTS.test(voice.name)) utter.pitch = FEMALE_VOICE_PITCH;
   } else {
     utter.lang = "ko-KR";
   }
@@ -161,6 +198,16 @@ els.startBtn.addEventListener("click", async () => {
     unlock.volume = 0;
     speechSynthesis.speak(unlock);
   } catch {}
+  // same gesture-unlock requirement applies to <audio> / AudioContext on iOS Safari
+  wireSsafyGain();
+  if (ssafyAudioCtx?.state === "suspended") ssafyAudioCtx.resume().catch(() => {});
+  ssafyAudio
+    .play()
+    .then(() => {
+      ssafyAudio.pause();
+      ssafyAudio.currentTime = 0;
+    })
+    .catch(() => {});
 
   els.status.textContent = "";
   Object.keys(HANDS).forEach((h) => {
@@ -179,7 +226,11 @@ els.startBtn.addEventListener("click", async () => {
 
   try {
     stream = await navigator.mediaDevices.getUserMedia({
-      video: { facingMode: "user" },
+      video: {
+        facingMode: "user",
+        width: { ideal: 1920 },
+        height: { ideal: 1080 },
+      },
       audio: false,
     });
   } catch (err) {
@@ -347,10 +398,11 @@ function updateFingers(handKey, lm, toPixel, rect, now) {
     if (!state.pinched && d < pinchOn) {
       state.pinched = true;
       if (special) {
+        state.baseScale = handScale;
         label.classList.add("shown");
         if (now - state.lastSpeakAt > 600) {
           state.lastSpeakAt = now;
-          speak(special.word);
+          playSsafyAudio();
         }
       } else if (now - state.lastSpeakAt > 600) {
         state.lastSpeakAt = now;
@@ -359,7 +411,14 @@ function updateFingers(handKey, lm, toPixel, rect, now) {
       }
     } else if (state.pinched && d > pinchOff) {
       state.pinched = false;
+      if (special) state.baseScale = null;
       label.classList.remove(special ? "shown" : "active");
+    }
+
+    if (special && state.pinched) {
+      const ratio = handScale / (state.baseScale || handScale);
+      const zoom = Math.min(PROXIMITY_MAX_SCALE, Math.max(PROXIMITY_MIN_SCALE, ratio));
+      label.style.setProperty("--proximity-scale", zoom.toFixed(3));
     }
 
     const px = toPixel(tip);
@@ -400,7 +459,7 @@ Object.keys(HANDS).forEach((handKey) => {
     if (special) {
       div.className = `finger-label finger-label-special finger-${fingerKey}`;
       const img = document.createElement("img");
-      img.src = special.image;
+      img.src = special;
       img.alt = "";
       div.appendChild(img);
     } else {
